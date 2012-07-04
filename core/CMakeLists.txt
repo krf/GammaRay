@@ -1,5 +1,3 @@
-add_subdirectory(tools)
-
 include_directories(
   ${CMAKE_SOURCE_DIR}
   ${CMAKE_SOURCE_DIR}/3rdparty
@@ -52,11 +50,6 @@ set(gammaray_srcs
   propertyeditor/propertyintpaireditor.cpp
   propertyeditor/propertypaletteeditor.cpp
   propertyeditor/palettedialog.cpp
-
-  hooking/abstractfunctionoverwriter.cpp
-  hooking/functionoverwriterfactory.cpp
-  hooking/winfunctionoverwriter.cpp
-  hooking/unixfunctionoverwriter.cpp
 
   tools/modelinspector/modeltester.cpp
   tools/modelinspector/modelmodel.cpp
@@ -155,16 +148,19 @@ qt4_wrap_ui(gammaray_srcs
 )
 
 add_definitions(-DMAKE_GAMMARAY_LIB)
-add_library(gammaray_probe
-  SHARED ${gammaray_srcs}
+
+# core lib
+add_library(gammaray_core SHARED
+  ${gammaray_srcs}
 )
-target_link_libraries(gammaray_probe
+target_link_libraries(gammaray_core
   ${QT_QTCORE_LIBRARIES}
   ${QT_QTGUI_LIBRARIES}
 )
 if(NOT WIN32)
-  target_link_libraries(gammaray_probe dl)
+  target_link_libraries(gammaray_core dl)
 endif()
-set_target_properties(gammaray_probe PROPERTIES PREFIX "")
+install(TARGETS gammaray_core ${INSTALL_TARGETS_DEFAULT_ARGS})
 
-install(TARGETS gammaray_probe ${INSTALL_TARGETS_DEFAULT_ARGS})
+add_subdirectory(hooking)
+add_subdirectory(tools)
