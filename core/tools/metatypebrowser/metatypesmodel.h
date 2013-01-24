@@ -42,10 +42,18 @@ class MetaTypesModel : public QAbstractTableModel
     virtual int rowCount(const QModelIndex &parent = QModelIndex()) const;
     virtual int columnCount(const QModelIndex &parent = QModelIndex()) const;
 
+    /**
+     * Return the meta type id of @p metaObject
+     *
+     * @return 0 if @p metaObject is not declared as meta type
+     */
+    int metaTypeForMetaObject(const QMetaObject* metaObject);
+
   private:
     void scanMetaTypes();
 
     QVector<int> m_metaTypes;
+    QHash<const QMetaObject*, int> m_metaObjectToTypeMap;
 };
 
 #endif

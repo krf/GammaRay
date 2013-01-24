@@ -25,6 +25,8 @@
 
 #include "probe.h"
 #include "readorwritelocker.h"
+// FIXME: Can we make the model shared across tools somehow? Move to Probe.h?
+#include "tools/metatypebrowser/metatypesmodel.h"
 
 #include <QDebug>
 #include <QThread>
@@ -47,7 +49,7 @@ class MetaObjectInfoTracker
 public:
   struct MetaObjectInfo
   {
-    MetaObjectInfo() : selfCount(0), inclusiveCount(0) {}
+    MetaObjectInfo() : selfCount(0), inclusiveCount(0), accumulatedSize(0) {}
 
     /// Number of objects of a particular meta object type
     int selfCount;
@@ -56,7 +58,25 @@ public:
      * + number of objects of type that inherit from this meta type
      */
     int inclusiveCount;
+
+    int accumulatedSize;
   };
+
+  MetaObjectInfoTracker(MetaTypesModel* metaTypeModel)
+    : m_metaTypesModel(metaTypeModel)
+  {
+    Q_ASSERT(m_metaTypesModel);
+  }
+
+  int minimumSizeOf(const QMetaObject* metaObject) const
+  {
+    int metaTypeId = m_metaTypesModel->metaTypeForMetaObject(metaObject);
+    while (metaTypeId == 0 && metaObject) {
+      metaTypeId = m_metaTypesModel->metaTypeForMetaObject(metaObject);
+      metaObject = metaObject->superClass();
+    }
+    return QMetaType::sizeOf(metaTypeId);
+  }
 
   /**
    * Use this whenever a new object of type @p metaObject was seen
@@ -82,6 +102,7 @@ public:
     const QMetaObject* current = metaObject;
     while (current) {
       ++m_metaObjectInfoMap[current].inclusiveCount;
+      m_metaObjectInfoMap[current].accumulatedSize += minimumSizeOf(metaObject);
       current = current->superClass();
     }
   }
@@ -106,6 +127,7 @@ public:
     const QMetaObject* current = metaObject;
     while (current) {
       --m_metaObjectInfoMap[current].inclusiveCount;
+      m_metaObjectInfoMap[current].accumulatedSize -= minimumSizeOf(metaObject);
       assert(m_metaObjectInfoMap[current].inclusiveCount >= 0);
       current = current->superClass();
     }
@@ -118,15 +140,20 @@ public:
 
 private:
   QHash<const QMetaObject*, MetaObjectInfo> m_metaObjectInfoMap;
+
+  MetaTypesModel* m_metaTypesModel;
 };
 
 }
 
 MetaObjectTreeModel::MetaObjectTreeModel(QObject* parent)
   : QAbstractItemModel(parent)
-  , m_infoTracker(new MetaObjectInfoTracker)
+  , m_metaTypesModel(new MetaTypesModel(this))
+  , m_infoTracker(0)
 {
   qRegisterMetaType<const QMetaObject *>();
+
+  m_infoTracker = new MetaObjectInfoTracker(m_metaTypesModel);
 }
 
 MetaObjectTreeModel::~MetaObjectTreeModel()
@@ -144,6 +171,10 @@ QVariant MetaObjectTreeModel::headerData(int section, Qt::Orientation orientatio
         return tr("Self (#Objects)");
       case ObjectInclusiveCountColumn:
         return tr("Incl. (#Objects)");
+      case ObjectSelfSizeColumn:
+        return tr("Object Size (Bytes)");
+      case ObjectAccumulatedSizeColumn:
+        return tr("Accumulated Size (Bytes)");
       default:
         return QVariant();
     }
@@ -178,6 +209,10 @@ QVariant MetaObjectTreeModel::data(const QModelIndex& index, int role) const
         return m_infoTracker->info(object).selfCount;
       case ObjectInclusiveCountColumn:
         return m_infoTracker->info(object).inclusiveCount;
+      case ObjectSelfSizeColumn:
+        return m_infoTracker->minimumSizeOf(object);
+      case ObjectAccumulatedSizeColumn:
+        return m_infoTracker->info(object).accumulatedSize;
       default:
         break;
     }

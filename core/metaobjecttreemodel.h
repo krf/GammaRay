@@ -28,6 +28,7 @@
 #include <QReadWriteLock>
 #include <QVector>
 
+class MetaTypesModel;
 namespace GammaRay {
 
 class MetaObjectInfoTracker;
@@ -45,6 +46,8 @@ class MetaObjectTreeModel : public QAbstractItemModel
       ObjectColumn,
       ObjectSelfCountColumn,
       ObjectInclusiveCountColumn,
+      ObjectSelfSizeColumn,
+      ObjectAccumulatedSizeColumn,
       _Last
     };
 
@@ -88,6 +91,7 @@ class MetaObjectTreeModel : public QAbstractItemModel
     QHash<const QMetaObject*, QVector<const QMetaObject*> > m_parentChildMap;
 
     MetaObjectInfoTracker* m_infoTracker;
+    MetaTypesModel* m_metaTypesModel;
 };
 
 }

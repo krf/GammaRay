@@ -124,7 +124,10 @@ QVariant MetaTypesModel::headerData(int section, Qt::Orientation orientation, in
 void MetaTypesModel::scanMetaTypes()
 {
   beginResetModel();
+
   m_metaTypes.clear();
+  m_metaObjectToTypeMap.clear();
+
 #if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
   for (int mtId = 0; QMetaType::isRegistered(mtId); ++mtId) {
     m_metaTypes.push_back(mtId);
@@ -133,10 +136,22 @@ void MetaTypesModel::scanMetaTypes()
   for (int mtId = 0; mtId <= QMetaType::User || QMetaType::isRegistered(mtId); ++mtId) {
     if (QMetaType::isRegistered(mtId)) {
       m_metaTypes.push_back(mtId);
+
+      const QMetaObject* metaObject = QMetaType::metaObjectForType(mtId);
+      if (metaObject)
+        m_metaObjectToTypeMap[metaObject] = mtId;
     }
   }
 #endif
+
   endResetModel();
+}
+
+int MetaTypesModel::metaTypeForMetaObject(const QMetaObject* metaObject)
+{
+  if (!m_metaObjectToTypeMap.contains(metaObject))
+    return 0;
+  return m_metaObjectToTypeMap[metaObject];
 }
 
 #include "metatypesmodel.moc"
