@@ -55,6 +55,8 @@ QVariant MetaTypesModel::data(const QModelIndex &index, int role) const
   case 2:
     return QMetaType::sizeOf(metaTypeId);
   case 3:
+    return (QMetaType::metaObjectForType(metaTypeId) != 0);
+  case 4:
   {
     const QMetaType::TypeFlags flags = QMetaType::typeFlags(metaTypeId);
     QStringList l;
@@ -112,6 +114,8 @@ QVariant MetaTypesModel::headerData(int section, Qt::Orientation orientation, in
   case 2:
     return tr("Size");
   case 3:
+    return tr("QObject-derived");
+  case 4:
     return tr("Type Flags");
   }
   return QVariant();
